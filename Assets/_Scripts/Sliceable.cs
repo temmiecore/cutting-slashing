@@ -5,12 +5,12 @@ using UnityEngine;
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class Sliceable : MonoBehaviour
 {
-    private MeshFilter meshFilter;
+    [HideInInspector] public MeshRenderer meshRenderer;
     [HideInInspector] public Mesh mesh;
 
     private void Start()
     {
-        meshFilter = GetComponent<MeshFilter>();
-        mesh = meshFilter.mesh;
+        mesh = GetComponent<MeshFilter>().mesh;
+        meshRenderer = GetComponent<MeshRenderer>();
     }
 }
