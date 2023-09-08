@@ -28,10 +28,6 @@ public class SlicerController: MonoBehaviour
 
         Plane plane = new Plane(normal, transformedStartingPoint);
 
-        /// Very dumb
-        if (plane.GetDistanceToPoint(GameObject.Find("HighPoint").transform.position) < 0)
-            plane.Flip();
-
         Slicer slicer = new Slicer(other.GetComponent<Sliceable>(), plane);
         slicer.Slice();
     }

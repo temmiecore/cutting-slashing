@@ -19,4 +19,11 @@ public class Sliceable : MonoBehaviour
         mesh = GetComponent<MeshFilter>().mesh;
         meshRenderer = GetComponent<MeshRenderer>();
     }
+
+    public void InitializeSliceable(Sliceable parent)
+    {
+        isSharpShaded = parent.isSharpShaded;
+        isHollow = parent.isHollow;
+        /// ...
+    }
 }

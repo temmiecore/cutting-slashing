@@ -81,8 +81,8 @@ public class Slicer
             /// Vertice 3 is on the other side:
             else if (vert1Side == vert2Side && vert1Side != vert3Side)
             {
-                Vector3 vert4 = PlaneVectorIntersection(vert1, vert3, out distance1);
-                Vector3 vert5 = PlaneVectorIntersection(vert2, vert3, out distance2);
+                Vector3 vert4 = PlaneVectorIntersection(vert2, vert3, out distance1);
+                Vector3 vert5 = PlaneVectorIntersection(vert1, vert3, out distance2);
 
                 Vector2 uv4 = CalculateUV(uv2, uv3, distance1);
                 Vector2 uv5 = CalculateUV(uv1, uv3, distance2);
@@ -113,8 +113,8 @@ public class Slicer
             /// Vertice 1 is on the other side:
             else if (vert2Side == vert3Side && vert2Side != vert1Side)
             {
-                Vector3 vert4 = PlaneVectorIntersection(vert1, vert2, out distance1);
-                Vector3 vert5 = PlaneVectorIntersection(vert1, vert3, out distance2);
+                Vector3 vert4 = PlaneVectorIntersection(vert2, vert1, out distance1);
+                Vector3 vert5 = PlaneVectorIntersection(vert3, vert1, out distance2);
 
                 Vector2 uv4 = CalculateUV(uv2, uv1, distance1);
                 Vector2 uv5 = CalculateUV(uv3, uv1, distance2);
@@ -227,6 +227,7 @@ public class Slicer
         }
     }
 
+    /// Divide this into modules
     private void SetUpObjects()
     {
         Vector3[] vertices1 = verts1.ToArray();
@@ -259,6 +260,18 @@ public class Slicer
 
         mesh1.RecalculateNormals();
         mesh2.RecalculateNormals();
+
+        positivePart.AddComponent<Sliceable>().InitializeSliceable(objectToSlice);
+        negativePart.AddComponent<Sliceable>().InitializeSliceable(objectToSlice);
+
+        MeshCollider meshCollider1 = positivePart.AddComponent<MeshCollider>();
+        MeshCollider meshCollider2 = negativePart.AddComponent<MeshCollider>();
+
+        meshCollider1.convex = true;
+        meshCollider2.convex = true;
+
+        positivePart.AddComponent<Rigidbody>();
+        negativePart.AddComponent<Rigidbody>();
 
         GameObject.Destroy(objectToSlice.gameObject);
     }
