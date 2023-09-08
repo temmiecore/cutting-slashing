@@ -10,15 +10,23 @@ public class SlicerController: MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        sliceStartingPoint = other.GetComponent<Collider>().ClosestPointOnBounds(transform.position);
+        sliceStartingPoint = transform.position;
     }
 
     private void OnTriggerExit(Collider other)
     {
-        sliceExitPoint = other.GetComponent<Collider>().ClosestPointOnBounds(transform.position);
+        sliceExitPoint = transform.position; 
         sliceTipPoint = other.GetComponent<Collider>().ClosestPointOnBounds(slicerTip.position);
 
-        Plane plane = new Plane(Vector3.Cross(sliceStartingPoint, sliceExitPoint).normalized, sliceTipPoint);
+        Vector3 vect1 = sliceExitPoint - sliceStartingPoint;
+        Vector3 vect2 = sliceTipPoint - sliceStartingPoint;
+
+        Vector3 normal = Vector3.Cross(vect1, vect2).normalized;
+
+        /// Because sliceStartingPoint is a local point attached to slicer, not a point in world coordinates
+        Vector3 transformedStartingPoint = other.gameObject.transform.InverseTransformPoint(sliceStartingPoint);
+
+        Plane plane = new Plane(normal, transformedStartingPoint);
 
         /// Very dumb
         if (plane.GetDistanceToPoint(GameObject.Find("HighPoint").transform.position) < 0)

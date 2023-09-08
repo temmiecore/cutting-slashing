@@ -8,6 +8,12 @@ public class Sliceable : MonoBehaviour
     [HideInInspector] public MeshRenderer meshRenderer;
     [HideInInspector] public Mesh mesh;
 
+    [Tooltip("Check if you want new vertices to be created for each triangle, hence making the model have sharp shading. No check - smooth shading.")]
+    public bool isSharpShaded;
+
+    [Tooltip("Check if is hollow inside.")]
+    public bool isHollow;
+
     private void Start()
     {
         mesh = GetComponent<MeshFilter>().mesh;
