@@ -6,23 +6,25 @@ using UnityEngine;
 
 public class Slicer
 {
-    private Sliceable objectToSlice;
-    private Plane plane;
-    private Material originalMaterial;
+    Sliceable objectToSlice;
+    Plane plane;
+    Material originalMaterial;
 
-    private Mesh mesh1, mesh2; /// 1 - positive side, 2 - negative side
+    Mesh mesh1, mesh2; /// 1 - positive side, 2 - negative side
 
-    private List<Vector3> originalVert;
-    private List<Vector3> verts1, verts2;
+    List<Vector3> originalVert;
+    List<Vector3> verts1, verts2;
 
-    private List<Vector2> originalUVs;
-    private List<Vector2> uvs1, uvs2;
+    List<Vector2> originalUVs;
+    List<Vector2> uvs1, uvs2;
 
-    private List<Vector3> originalNormals;
-    private List<Vector3> normals1, normals2;
+    List<Vector3> originalNormals;
+    List<Vector3> normals1, normals2;
 
-    private List<int> originalTris;
-    private List<int> tris1, tris2;
+    List<int> originalTris;
+    List<int> tris1, tris2;
+
+    List<Vector3> intersectionVerts;
 
     bool isSharpShaded, isHollow;
 
@@ -43,6 +45,8 @@ public class Slicer
         uvs1 = new List<Vector2>(); uvs2 = new List<Vector2>();
         normals1 = new List<Vector3>(); normals2 = new List<Vector3>();
 
+        intersectionVerts = new List<Vector3>();
+
         isSharpShaded = objectToSlice.isSharpShaded;
         isHollow = objectToSlice.isHollow;
     }
@@ -56,8 +60,8 @@ public class Slicer
             Vector3 vert3 = originalVert[originalTris[i + 2]];
 
             Vector2 uv1 = originalUVs[originalTris[i]];
-            Vector2 uv2 = originalUVs[originalTris[i+ 1]];
-            Vector2 uv3 = originalUVs[originalTris[i+2]];
+            Vector2 uv2 = originalUVs[originalTris[i + 1]];
+            Vector2 uv3 = originalUVs[originalTris[i + 2]];
 
             Vector3 norm1 = originalNormals[originalTris[i]];
             Vector3 norm2 = originalNormals[originalTris[i + 1]];
@@ -67,8 +71,6 @@ public class Slicer
             bool vert2Side = plane.GetSide(vert2);
             bool vert3Side = plane.GetSide(vert3);
 
-            Debug.Log(vert1Side + " " + vert2Side + " " + vert3Side);
-
             float distance1 = 0, distance2 = 0;
 
             /// Is normal calculation needed? Error doesn't seem to affect anything
@@ -76,62 +78,74 @@ public class Slicer
             /// All vertices are on the same side:
             if (vert1Side == vert2Side && vert1Side == vert3Side)
             {
-                CheckVertices(vert1Side, vert1, vert2, vert3, uv1, uv2, uv3, norm1, norm2, norm3);
+                CheckVertices(vert1Side, vert1, vert2, vert3, uv1, uv2, uv3, norm1, norm2, norm3, false);
             }
-            /// Vertice 3 is on the other side:
-            else if (vert1Side == vert2Side && vert1Side != vert3Side)
+            else
             {
-                Vector3 vert4 = PlaneVectorIntersection(vert2, vert3, out distance1);
-                Vector3 vert5 = PlaneVectorIntersection(vert1, vert3, out distance2);
+                Vector3 vert4, vert5;
+                Vector2 uv4, uv5;
+                Vector3 norm4, norm5;
 
-                Vector2 uv4 = CalculateUV(uv2, uv3, distance1);
-                Vector2 uv5 = CalculateUV(uv1, uv3, distance2);
+                /// Vertice 3 is on the other side:
+                if (vert1Side == vert2Side && vert1Side != vert3Side)
+                {
+                    vert4 = PlaneVectorIntersection(vert2, vert3, out distance1);
+                    vert5 = PlaneVectorIntersection(vert1, vert3, out distance2);
 
-                Vector3 norm4 = CalculateNormal(vert2, vert3, vert4);
-                Vector3 norm5 = CalculateNormal(vert1, vert3, vert5);
+                    uv4 = CalculateUV(uv2, uv3, distance1);
+                    uv5 = CalculateUV(uv1, uv3, distance2);
 
-                CheckVertices(vert1Side, vert5, vert1, vert4, uv5, uv1, uv4, norm5, norm1, norm4);
-                CheckVertices(vert1Side, vert4, vert1, vert2, uv4, uv1, uv2, norm4, norm1, norm2);
-                CheckVertices(vert3Side, vert3, vert5, vert4, uv3, uv5, uv4, norm3, norm5, norm4);
-            }
-            /// Vertice 2 is on the other side:
-            else if (vert1Side == vert3Side && vert1Side != vert2Side)
-            {
-                Vector3 vert4 = PlaneVectorIntersection(vert1, vert2, out distance1);
-                Vector3 vert5 = PlaneVectorIntersection(vert3, vert2, out distance2);
+                    norm4 = CalculateNormal(vert2, vert3, vert4);
+                    norm5 = CalculateNormal(vert1, vert3, vert5);
 
-                Vector2 uv4 = CalculateUV(uv1, uv2, distance1);
-                Vector2 uv5 = CalculateUV(uv3, uv2, distance2);
+                    CheckVertices(vert1Side, vert5, vert1, vert4, uv5, uv1, uv4, norm5, norm1, norm4, false);
+                    CheckVertices(vert1Side, vert4, vert1, vert2, uv4, uv1, uv2, norm4, norm1, norm2, false);
+                    CheckVertices(vert3Side, vert3, vert5, vert4, uv3, uv5, uv4, norm3, norm5, norm4, false);
+                }
+                /// Vertice 2 is on the other side:
+                else if (vert1Side == vert3Side && vert1Side != vert2Side)
+                {
+                    vert4 = PlaneVectorIntersection(vert1, vert2, out distance1);
+                    vert5 = PlaneVectorIntersection(vert3, vert2, out distance2);
 
-                Vector3 norm4 = CalculateNormal(vert1, vert2, vert4);
-                Vector3 norm5 = CalculateNormal(vert3, vert2, vert5);
+                    uv4 = CalculateUV(uv1, uv2, distance1);
+                    uv5 = CalculateUV(uv3, uv2, distance2);
 
-                CheckVertices(vert1Side, vert3, vert1, vert5, uv3, uv1, uv5, norm3, norm1, norm5);
-                CheckVertices(vert1Side, vert5, vert1, vert4, uv5, uv1, uv4, norm5, norm1, norm4);
-                CheckVertices(vert2Side, vert5, vert4, vert2, uv5, uv4, uv2, norm5, norm4, norm2);
-            }
-            /// Vertice 1 is on the other side:
-            else if (vert2Side == vert3Side && vert2Side != vert1Side)
-            {
-                Vector3 vert4 = PlaneVectorIntersection(vert2, vert1, out distance1);
-                Vector3 vert5 = PlaneVectorIntersection(vert3, vert1, out distance2);
+                    norm4 = CalculateNormal(vert1, vert2, vert4);
+                    norm5 = CalculateNormal(vert3, vert2, vert5);
 
-                Vector2 uv4 = CalculateUV(uv2, uv1, distance1);
-                Vector2 uv5 = CalculateUV(uv3, uv1, distance2);
+                    CheckVertices(vert1Side, vert3, vert1, vert5, uv3, uv1, uv5, norm3, norm1, norm5, false);
+                    CheckVertices(vert1Side, vert5, vert1, vert4, uv5, uv1, uv4, norm5, norm1, norm4, false);
+                    CheckVertices(vert2Side, vert5, vert4, vert2, uv5, uv4, uv2, norm5, norm4, norm2, false);
+                }
+                /// Vertice 1 is on the other side:
+                else
+                {
+                    vert4 = PlaneVectorIntersection(vert2, vert1, out distance1);
+                    vert5 = PlaneVectorIntersection(vert3, vert1, out distance2);
 
-                Vector3 norm4 = CalculateNormal(vert2, vert1, vert4);
-                Vector3 norm5 = CalculateNormal(vert3, vert1, vert5);
+                    uv4 = CalculateUV(uv2, uv1, distance1);
+                    uv5 = CalculateUV(uv3, uv1, distance2);
 
-                CheckVertices(vert2Side, vert3, vert5, vert4, uv3, uv5, uv4, norm3, norm5, norm4);
-                CheckVertices(vert2Side, vert4, vert2, vert3, uv4, uv2, uv3, norm4, norm2, norm3);
-                CheckVertices(vert1Side, vert5, vert1, vert4, uv5, uv1, uv4, norm5, norm1, norm4);
+                    norm4 = CalculateNormal(vert2, vert1, vert4);
+                    norm5 = CalculateNormal(vert3, vert1, vert5);
+
+                    CheckVertices(vert2Side, vert3, vert5, vert4, uv3, uv5, uv4, norm3, norm5, norm4, false);
+                    CheckVertices(vert2Side, vert4, vert2, vert3, uv4, uv2, uv3, norm4, norm2, norm3, false);
+                    CheckVertices(vert1Side, vert5, vert1, vert4, uv5, uv1, uv4, norm5, norm1, norm4, false);
+                }
+
+                intersectionVerts.Add(vert4);
+                intersectionVerts.Add(vert5);
             }
         }
+
+        FillHollows();
 
         SetUpObjects();
     }
 
-    private void CheckVertices(bool isPositiveSide, Vector3 v1, Vector3 v2, Vector3 v3, Vector2 uv1, Vector2 uv2, Vector2 uv3, Vector3? n1, Vector3? n2, Vector3? n3)
+    private void CheckVertices(bool isPositiveSide, Vector3 v1, Vector3 v2, Vector3 v3, Vector2 uv1, Vector2 uv2, Vector2 uv3, Vector3? n1, Vector3? n2, Vector3? n3, bool isSharp)
     {
         int index1 = 0, index2 = 0, index3 = 0;
 
@@ -139,7 +153,7 @@ public class Slicer
         {
             index1 = verts1.IndexOf(v1);
 
-            if (index1 == -1 || (index1 > -1 && isSharpShaded))
+            if (index1 == -1 || (index1 > -1 && (isSharpShaded || isSharp)))
             {
                 verts1.Add(v1); uvs1.Add(uv1);
 
@@ -151,7 +165,7 @@ public class Slicer
 
             index2 = verts1.IndexOf(v2);
 
-            if (index2 == -1 || (index2 > -1 && isSharpShaded))
+            if (index2 == -1 || (index2 > -1 && (isSharpShaded || isSharp)))
             {
                 verts1.Add(v2); uvs1.Add(uv2);
 
@@ -163,7 +177,7 @@ public class Slicer
 
             index3 = verts1.IndexOf(v3);
 
-            if (index3 == -1 || (index3 > -1 && isSharpShaded))
+            if (index3 == -1 || (index3 > -1 && (isSharpShaded || isSharp)))
             {
                 verts1.Add(v3); uvs1.Add(uv3);
 
@@ -177,7 +191,7 @@ public class Slicer
         {
             index1 = verts2.IndexOf(v1);
 
-            if (index1 == -1 || (index1 > -1 && isSharpShaded))
+            if (index1 == -1 || (index1 > -1 && (isSharpShaded || isSharp)))
             {
                 verts2.Add(v1); uvs2.Add(uv1);
 
@@ -189,7 +203,7 @@ public class Slicer
 
             index2 = verts2.IndexOf(v2);
 
-            if (index2 == -1 || (index2 > -1 && isSharpShaded))
+            if (index2 == -1 || (index2 > -1 && (isSharpShaded || isSharp)))
             {
                 verts2.Add(v2); uvs2.Add(uv2);
 
@@ -201,7 +215,7 @@ public class Slicer
 
             index3 = verts2.IndexOf(v3);
 
-            if (index3 == -1 || (index3 > -1 && isSharpShaded))
+            if (index3 == -1 || (index3 > -1 && (isSharpShaded || isSharp)))
             {
                 verts2.Add(v3); uvs2.Add(uv3);
 
@@ -290,8 +304,8 @@ public class Slicer
     }
 
     private Vector2 CalculateUV(Vector2 uv1, Vector2 uv2, float distance)
-    { 
-        return Vector2.Lerp(uv1, uv2, distance); 
+    {
+        return Vector2.Lerp(uv1, uv2, distance);
     }
 
     private Vector3 CalculateNormal(Vector3 v1, Vector3 v2, Vector3 v3)
@@ -302,5 +316,53 @@ public class Slicer
         Vector3 normal = Vector3.Cross(side1, side2);
 
         return normal.normalized;
+    }
+
+    private Vector3 GetCenter()
+    {
+        if (intersectionVerts.Count == 0)
+            return Vector3.zero;
+
+        float maxDistance = 0;
+        Vector3 startingPoint = intersectionVerts[0];
+        Vector3 endPoint = Vector3.zero;
+
+        for (int i = 1; i < intersectionVerts.Count; i++)
+        {
+            if (Vector3.Distance(startingPoint, intersectionVerts[i]) > maxDistance)
+            {
+                endPoint = intersectionVerts[i];
+                maxDistance = Vector3.Distance(startingPoint, intersectionVerts[i]);
+            }
+        }
+
+        return Vector3.Lerp(startingPoint, endPoint, 0.5f); ;
+    }
+
+    private void FillHollows()
+    {
+        Vector3 centerPoint = GetCenter();
+
+        for (int i = 0; i < intersectionVerts.Count; i += 2)
+        {
+            Vector3 v1 = intersectionVerts[i];
+            Vector3 v2 = intersectionVerts[i + 1];
+
+            Vector3 centerNormal = CalculateNormal(v1, v2, centerPoint);
+
+            float direction = Vector3.Dot(centerNormal, plane.normal);
+
+
+            if (direction > 0)
+            {
+                CheckVertices(true, v1, centerPoint, v2, Vector3.zero, Vector3.zero, Vector3.zero, centerNormal, centerNormal, centerNormal, true);
+                CheckVertices(false, v2, centerPoint, v1, Vector3.zero, Vector3.zero, Vector3.zero, centerNormal, centerNormal, centerNormal, true);
+            }
+            else
+            {
+                CheckVertices(true, v2, centerPoint, v1, Vector3.zero, Vector3.zero, Vector3.zero, centerNormal, centerNormal, centerNormal, true);
+                CheckVertices(false, v1, centerPoint, v2, Vector3.zero, Vector3.zero, Vector3.zero, centerNormal, centerNormal, centerNormal, true);
+            }
+        }
     }
 }
